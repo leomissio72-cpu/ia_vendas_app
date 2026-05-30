@@ -1,46 +1,217 @@
-name: Extrair produto e gerar linha para planilha
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marketing IA - Gemini</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);padding:24px 16px;font-family:'Segoe UI',sans-serif;color:#fff}
+  .container{max-width:820px;margin:0 auto}
+  .header{text-align:center;margin-bottom:32px}
+  .icon{font-size:40px;margin-bottom:8px}
+  h1{font-size:24px;font-weight:700}
+  .sub{color:#a0aec0;font-size:14px;margin-top:6px}
+  .card{background:rgba(255,255,255,0.07);border-radius:16px;padding:20px;margin-bottom:24px;border:1px solid rgba(255,255,255,0.1)}
+  label{color:#e2e8f0;font-size:13px;font-weight:600;display:block;margin-bottom:8px}
+  .input-row{display:flex;gap:10px;flex-wrap:wrap}
+  input{flex:1;min-width:200px;padding:12px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#fff;font-size:14px;outline:none}
+  button{padding:12px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-weight:700;font-size:14px;cursor:pointer;transition:.2s}
+  button:disabled{background:#555;cursor:not-allowed}
+  button:hover:not(:disabled){opacity:.9}
+  .section{background:rgba(255,255,255,0.06);border-radius:14px;padding:18px;margin-bottom:16px}
+  .section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .section-title{font-weight:700;font-size:13px}
+  .btn-copy{background:rgba(255,255,255,0.1);border:none;border-radius:8px;padding:5px 12px;color:#fff;font-size:12px;cursor:pointer;font-weight:600;transition:.2s}
+  .btn-copy.copied{background:#48bb78}
+  .section-body{color:#e2e8f0;font-size:13px;line-height:1.8;white-space:pre-wrap}
+  .table-wrap{overflow-x:auto;margin-top:4px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:rgba(102,126,234,0.3);color:#e2e8f0;padding:8px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,0.1)}
+  td{color:#cbd5e0;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:top;word-break:break-word}
+  .yellow-card{background:rgba(255,255,255,0.06);border-radius:14px;padding:18px;border:2px solid #f6c90e;margin-top:8px}
+  .yellow-title{color:#f6c90e;font-weight:700;font-size:14px}
+  .btn-yellow{background:rgba(246,201,14,0.2);border:1px solid #f6c90e;border-radius:8px;padding:6px 14px;color:#f6c90e;font-size:12px;cursor:pointer;font-weight:700}
+  .btn-yellow.copied{background:#48bb78;border-color:#48bb78;color:#fff}
+  textarea{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(246,201,14,0.3);border-radius:10px;padding:12px;color:#e2e8f0;font-size:12px;font-family:monospace;resize:vertical;outline:none;margin-top:10px}
+  .hint{color:#a0aec0;font-size:11px;margin-top:8px}
+  .error{background:rgba(255,82,82,0.15);border:1px solid #ff5252;border-radius:10px;padding:14px;color:#ff8a80;margin-bottom:20px}
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="icon">🚀</div>
+    <h1>Marketing IA (Gemini)</h1>
+    <p class="sub">Cole um link e gere textos de vendas + CSV pronto para planilha</p>
+  </div>
 
-on:
-  workflow_dispatch:
-    inputs:
-      url:
-        description: 'Link do produto (Amazon, Mercado Livre, Shopee...)'
-        required: true
-        type: string
-      nome:
-        description: 'Nome do produto (opcional – deixe em branco para extrair automaticamente)'
-        required: false
-        type: string
-      preco:
-        description: 'Preço (opcional – ex: R$ 99,90)'
-        required: false
-        type: string
-      descricao:
-        description: 'Descrição (opcional)'
-        required: false
-        type: string
-      imagem:
-        description: 'URL da imagem (opcional)'
-        required: false
-        type: string
-      categoria:
-        description: 'Categoria (deixe em branco e escolha interativamente)'
-        required: false
-        type: string
-      loja:
-        description: 'Loja (deixe em branco e escolha interativamente)'
-        required: false
-        type: string
+  <!-- OPCIONAL: campo para a chave (se quiser que o usuário cole) -->
+  <div class="card">
+    <label>🔐 SUA CHAVE API GEMINI (grátis em <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#667eea">aistudio.google.com/apikey</a>)</label>
+    <div class="input-row">
+      <input type="password" id="apiKey" placeholder="Cole sua chave: AIzaSy...">
+      <button id="saveKeyBtn">💾 Salvar</button>
+    </div>
+    <div id="keyStatus" style="font-size:12px; margin-top:8px; color:#718096"></div>
+  </div>
 
-jobs:
-  extrair:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - run: pip install -r requirements.txt
-      - name: Executar extração
-        run: |
-          python extrair.py "${{ inputs.url }}" "${{ inputs.nome }}" "${{ inputs.preco }}" "${{ inputs.descricao }}" "${{ inputs.imagem }}" "${{ inputs.categoria }}" "${{ inputs.loja }}"
+  <!-- LINK DO PRODUTO -->
+  <div class="card">
+    <label>🔗 LINK DO PRODUTO/SERVIÇO</label>
+    <div class="input-row">
+      <input type="text" id="linkInput" placeholder="https://amazon.com.br/...">
+      <button id="analyzeBtn">🔍 Analisar</button>
+    </div>
+  </div>
+
+  <div id="errorBox" class="error" style="display:none"></div>
+  <div id="results" style="display:none">
+    <div class="section"><div class="section-head"><span class="section-title">💬 WhatsApp</span><button class="btn-copy" data-section="wpp">📋 Copiar</button></div><div class="section-body" id="wpp"></div></div>
+    <div class="section"><div class="section-head"><span class="section-title">😰 Dor / Problema</span><button class="btn-copy" data-section="dor">📋 Copiar</button></div><div class="section-body" id="dor"></div></div>
+    <div class="section"><div class="section-head"><span class="section-title">✨ Benefício</span><button class="btn-copy" data-section="ben">📋 Copiar</button></div><div class="section-body" id="ben"></div></div>
+    <div class="section"><div class="section-head"><span class="section-title">⚡ Urgência</span><button class="btn-copy" data-section="urg">📋 Copiar</button></div><div class="section-body" id="urg"></div></div>
+    <div class="section"><div class="section-head"><span class="section-title">📊 Tabela de Dados</span><button id="downloadCSVBtn" class="btn-dl">⬇️ Baixar CSV</button></div><div class="table-wrap"><table><thead><tr id="tableHead"></tr></thead><tbody id="tableBody"></tbody></table></div></div>
+    <div class="yellow-card"><div class="section-head"><span class="yellow-title">📋 Linha para colar na planilha</span><button id="copyCSVBtn" class="btn-yellow">📋 Copiar tudo</button></div><textarea id="csvBox" rows="4" readonly></textarea><p class="hint">Clique na caixa → Ctrl+C → cole no Google Sheets (Ctrl+V)</p></div>
+  </div>
+</div>
+
+<script>
+const HEADERS = ["id","nome","descricao","preco","imagens_1","imagens_2","imagens_3","link","categoria","loja"];
+let csvData = "";
+
+// Gerenciar chave (sessionStorage)
+function saveKey() {
+  const key = document.getElementById("apiKey").value.trim();
+  if (!key) { alert("Cole sua chave."); return; }
+  sessionStorage.setItem("gemini_key", key);
+  document.getElementById("keyStatus").innerHTML = "✅ Chave salva nesta sessão.";
+}
+function getKey() {
+  return sessionStorage.getItem("gemini_key") || document.getElementById("apiKey").value.trim();
+}
+document.getElementById("saveKeyBtn").onclick = saveKey;
+window.onload = () => {
+  const saved = sessionStorage.getItem("gemini_key");
+  if (saved) { document.getElementById("apiKey").value = saved; document.getElementById("keyStatus").innerHTML = "✅ Chave carregada."; }
+};
+
+const SYSTEM_PROMPT = `Você é um Especialista em Marketing Digital e Automação de Vendas. Analise o produto e gere:
+
+## WHATSAPP
+(mensagem curta, até 5 linhas, com emojis e CTA)
+
+## DOR
+(copy para Instagram focada no problema, com 10 hashtags)
+
+## BENEFICIO
+(copy para Instagram focada nos benefícios, com 10 hashtags)
+
+## URGENCIA
+(copy para Instagram com gatilho de escassez, com 10 hashtags)
+
+## DADOS CSV
+CSV_START
+id	nome	descricao	preco	imagens_1	imagens_2	imagens_3	link	categoria	loja
+[dados do produto separados por TAB]
+CSV_END
+
+Use criatividade e textos únicos.`;
+
+async function analyze() {
+  const link = document.getElementById("linkInput").value.trim();
+  const apiKey = getKey();
+  if (!apiKey) { alert("Salve sua chave API Gemini primeiro."); return; }
+  if (!link) { alert("Cole o link do produto."); return; }
+
+  const btn = document.getElementById("analyzeBtn");
+  const errBox = document.getElementById("errorBox");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Analisando...';
+  errBox.style.display = "none";
+  document.getElementById("results").style.display = "none";
+
+  const seed = Math.random().toString(36).substring(2,8);
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: SYSTEM_PROMPT + `\n\nProduto: ${link}\nSessão única: ${seed}` }] }],
+        generationConfig: { temperature: 1.0, maxOutputTokens: 2048 }
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error?.message || "Erro na API");
+    const text = data.candidates[0].content.parts[0].text;
+
+    const get = (marker, next) => {
+      const s = text.indexOf(`## ${marker}`);
+      if (s === -1) return "";
+      let e = next ? text.indexOf(`## ${next}`) : text.length;
+      if (e === -1) e = text.length;
+      return text.slice(s + marker.length + 3, e).trim();
+    };
+    document.getElementById("wpp").textContent = get("WHATSAPP","DOR");
+    document.getElementById("dor").textContent = get("DOR","BENEFICIO");
+    document.getElementById("ben").textContent = get("BENEFICIO","URGENCIA");
+    document.getElementById("urg").textContent = get("URGENCIA","DADOS CSV");
+
+    const csvMatch = text.match(/CSV_START\n([\s\S]*?)\nCSV_END/);
+    csvData = csvMatch ? csvMatch[1].trim() : "";
+    document.getElementById("csvBox").value = csvData;
+
+    const rows = csvData.split("\n").filter(l => l.trim());
+    const head = document.getElementById("tableHead");
+    const body = document.getElementById("tableBody");
+    head.innerHTML = HEADERS.map(h => `<th>${h}</th>`).join("");
+    body.innerHTML = "";
+    rows.slice(1).forEach(row => {
+      const cells = row.split("\t");
+      body.innerHTML += `<tr>${HEADERS.map((_,j) => `<td>${cells[j] || "—"}</td>`).join("")}</tr>`;
+    });
+
+    document.getElementById("results").style.display = "block";
+  } catch(e) {
+    errBox.textContent = "❌ Erro: " + e.message;
+    errBox.style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "🔍 Analisar";
+  }
+}
+
+// Eventos e utilitários
+document.getElementById("analyzeBtn").onclick = analyze;
+document.getElementById("linkInput").addEventListener("keydown", e => { if (e.key === "Enter") analyze(); });
+
+document.querySelectorAll(".btn-copy").forEach(btn => {
+  btn.onclick = () => {
+    const section = btn.getAttribute("data-section");
+    const text = document.getElementById(section).textContent;
+    navigator.clipboard.writeText(text);
+    btn.textContent = "✓ Copiado!";
+    btn.classList.add("copied");
+    setTimeout(() => { btn.textContent = "📋 Copiar"; btn.classList.remove("copied"); }, 2000);
+  };
+});
+document.getElementById("copyCSVBtn").onclick = () => {
+  navigator.clipboard.writeText(csvData);
+  const btn = document.getElementById("copyCSVBtn");
+  btn.textContent = "✓ Copiado!";
+  btn.classList.add("copied");
+  setTimeout(() => { btn.textContent = "📋 Copiar tudo"; btn.classList.remove("copied"); }, 2000);
+};
+document.getElementById("downloadCSVBtn").onclick = () => {
+  const blob = new Blob(["\uFEFF" + csvData], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "produtos_marketing.csv";
+  a.click();
+};
+</script>
+</body>
+</html>
