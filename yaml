@@ -1,0 +1,46 @@
+name: Extrair produto e gerar linha para planilha
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Link do produto (Amazon, Mercado Livre, Shopee...)'
+        required: true
+        type: string
+      nome:
+        description: 'Nome do produto (opcional – deixe em branco para extrair automaticamente)'
+        required: false
+        type: string
+      preco:
+        description: 'Preço (opcional – ex: R$ 99,90)'
+        required: false
+        type: string
+      descricao:
+        description: 'Descrição (opcional)'
+        required: false
+        type: string
+      imagem:
+        description: 'URL da imagem (opcional)'
+        required: false
+        type: string
+      categoria:
+        description: 'Categoria (deixe em branco e escolha interativamente)'
+        required: false
+        type: string
+      loja:
+        description: 'Loja (deixe em branco e escolha interativamente)'
+        required: false
+        type: string
+
+jobs:
+  extrair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+      - name: Executar extração
+        run: |
+          python extrair.py "${{ inputs.url }}" "${{ inputs.nome }}" "${{ inputs.preco }}" "${{ inputs.descricao }}" "${{ inputs.imagem }}" "${{ inputs.categoria }}" "${{ inputs.loja }}"
